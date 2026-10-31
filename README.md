@@ -28,14 +28,66 @@
 - [需求规格说明书](docs/第六组-东软云HIS医院管理系统需求规格说明书.docx)
 - [系统设计说明书](docs/第六组-东软云HIS医院管理系统系统设计说明书.docx)
 
-## 目录结构（规划）
+## 目录结构
 
 ```
 .
 ├── backend/    # 后端：Spring Boot + MyBatis + Maven
 ├── frontend/   # 前端：Vue + Element-UI + Node.js
-├── docs/       # 需求、设计文档
+├── sql/        # 数据库初始化脚本
+├── docs/       # 需求、设计、契约文档
 └── README.md
+```
+
+### backend/
+
+```
+backend/
+├── pom.xml
+└── src/main/
+    ├── java/com/his/
+    │   ├── HisApplication.java
+    │   ├── common/
+    │   │   ├── Result.java
+    │   │   ├── ResultCode.java
+    │   │   ├── exception/
+    │   │   │   ├── BusinessException.java
+    │   │   │   └── GlobalExceptionHandler.java
+    │   │   └── config/
+    │   │       ├── CorsConfig.java
+    │   │       └── WebConfig.java
+    │   ├── entity/           # 16 张表实体
+    │   ├── mapper/           # Mapper 接口
+    │   ├── base/             # 登录 + 基础数据
+    │   ├── register/         # 挂号收费
+    │   ├── statistics/       # 综合管理
+    │   ├── outpatient/       # 门诊医生
+    │   ├── pharmacy/         # 药房管理
+    │   ├── check/            # 检查管理
+    │   ├── inspection/       # 检验管理
+    │   └── disposal/         # 处置管理
+    └── resources/
+        ├── application.yml
+        └── mapper/           # MyBatis XML
+```
+
+### frontend/
+
+```
+frontend/
+├── package.json
+├── vue.config.js
+├── public/index.html
+└── src/
+    ├── main.js
+    ├── App.vue
+    ├── router/
+    │   ├── index.js
+    │   └── modules/          # 按模块拆分的路由
+    ├── api/                  # axios 封装 + 各模块 API
+    ├── views/                # 页面（按模块子目录）
+    ├── components/           # 公共组件
+    └── assets/
 ```
 
 ## 分支协作规范
