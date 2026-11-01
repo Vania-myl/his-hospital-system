@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.RegisterMapper">
+
+    <insert id="insert" parameterType="com.his.entity.Register" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO register
+            (case_number, real_name, gender, card_number, birthdate, age, age_type, home_address,
+             visit_date, noon, department_id, employee_id, regist_level_id, settle_category_id,
+             is_book, regist_method, regist_money, visit_state)
+        VALUES
+            (#{caseNumber}, #{realName}, #{gender}, #{cardNumber}, #{birthdate}, #{age}, #{ageType}, #{homeAddress},
+             #{visitDate}, #{noon}, #{departmentId}, #{employeeId}, #{registLevelId}, #{settleCategoryId},
+             #{isBook}, #{registMethod}, #{registMoney}, #{visitState})
+    </insert>
+
+    <select id="selectById" resultType="com.his.entity.Register">
+        SELECT * FROM register WHERE id = #{id}
+    </select>
+
+    <select id="selectLatestByCaseNumber" resultType="com.his.entity.Register">
+        SELECT * FROM register WHERE case_number = #{caseNumber} ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="selectLatestByCardNumber" resultType="com.his.entity.Register">
+        SELECT * FROM register WHERE card_number = #{cardNumber} ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="selectList" resultType="com.his.entity.Register">
+        SELECT * FROM register
+        <where>
+            <if test="caseNumber != null and caseNumber != ''">
+                AND case_number = #{caseNumber}
+            </if>
+            <if test="realName != null and realName != ''">
+                AND real_name LIKE CONCAT('%', #{realName}, '%')
+            </if>
+            <if test="visitState != null">
+                AND visit_state = #{visitState}
+            </if>
+            <if test="visitDate != null and visitDate != ''">
+                AND DATE(visit_date) = #{visitDate}
+            </if>
+            <if test="departmentId != null">
+                AND department_id = #{departmentId}
+            </if>
+        </where>
+        ORDER BY id DESC
+        <if test="offset != null and size != null">
+            LIMIT #{offset}, #{size}
+        </if>
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM register
+        <where>
+            <if test="caseNumber != null and caseNumber != ''">
+                AND case_number = #{caseNumber}
+            </if>
+            <if test="realName != null and realName != ''">
+                AND real_name LIKE CONCAT('%', #{realName}, '%')
+            </if>
+            <if test="visitState != null">
+                AND visit_state = #{visitState}
+            </if>
+            <if test="visitDate != null and visitDate != ''">
+                AND DATE(visit_date) = #{visitDate}
+            </if>
+            <if test="departmentId != null">
+                AND department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateVisitState">
+        UPDATE register SET visit_state = #{visitState} WHERE id = #{id}
+    </update>
+</mapper>

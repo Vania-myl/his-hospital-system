@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.FeeRecordMapper">
+
+    <insert id="insert" parameterType="com.his.entity.FeeRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO fee_record
+            (register_id, item_type, item_id, fee_type, fee_amount, fee_method, refund_target_id, operator_id, remark, create_time)
+        VALUES
+            (#{registerId}, #{itemType}, #{itemId}, #{feeType}, #{feeAmount}, #{feeMethod}, #{refundTargetId}, #{operatorId}, #{remark}, #{createTime})
+    </insert>
+
+    <select id="selectById" resultType="com.his.entity.FeeRecord">
+        SELECT * FROM fee_record WHERE id = #{id}
+    </select>
+
+    <select id="selectByRegisterId" resultType="com.his.entity.FeeRecord">
+        SELECT * FROM fee_record WHERE register_id = #{registerId} ORDER BY id DESC
+    </select>
+
+    <!-- 费用流水查询：某患者全部流水，联表还原项目名称/规格/单价/数量/状态/科室 -->
+    <select id="selectRecordsByCaseNumber" resultType="com.his.register.dto.FeeRecordVO">
+        SELECT
+            fr.id,
+            fr.register_id,
+            r.case_number,
+            r.real_name,
+            r.gender,
+            r.age,
+            r.card_number,
+            fr.item_type,
+            fr.item_id,
+            fr.fee_type,
+            fr.fee_amount,
+            fr.fee_method,
+            fr.refund_target_id,
+            fr.remark,
+            fr.create_time,
+            COALESCE(d.drug_name, mt.tech_name, lv.regist_name) AS item_name,
+            COALESCE(d.drug_format, mt.tech_format) AS item_format,
+            COALESCE(d.drug_price, mt.tech_price, lv.regist_fee) AS unit_price,
+            COALESCE(p.drug_number, '1') AS quantity,
+            COALESCE(p.drug_state, cr.check_state, ir.inspection_state, dr.disposal_state) AS item_state,
+            dep.dept_name AS dept_name
+        FROM fee_record fr
+        JOIN register r ON fr.register_id = r.id
+        LEFT JOIN prescription p ON fr.item_type = '处方' AND fr.item_id = p.id
+        LEFT JOIN drug_info d ON p.drug_id = d.id
+        LEFT JOIN check_request cr ON fr.item_type = '检查' AND fr.item_id = cr.id
+        LEFT JOIN inspection_request ir ON fr.item_type = '检验' AND fr.item_id = ir.id
+        LEFT JOIN disposal_request dr ON fr.item_type = '处置' AND fr.item_id = dr.id
+        LEFT JOIN medical_technology mt
+               ON mt.id = COALESCE(cr.medical_technology_id, ir.medical_technology_id, dr.medical_technology_id)
+        LEFT JOIN department dep ON dep.id = mt.department_id
+        LEFT JOIN regist_level lv ON fr.item_type = '挂号费' AND lv.id = r.regist_level_id
+        WHERE r.case_number = #{caseNumber}
+        ORDER BY fr.id DESC
+    </select>
+
+    <!-- 退费列表：某患者已收费（处方/检查/检验/处置）且尚未退费的记录 -->
+    <select id="selectRefundableByCaseNumber" resultType="com.his.register.dto.FeeRecordVO">
+        SELECT
+            fr.id,
+            fr.register_id,
+            r.case_number,
+            r.real_name,
+            r.gender,
+            r.age,
+            r.card_number,
+            fr.item_type,
+            fr.item_id,
+            fr.fee_type,
+            fr.fee_amount,
+            fr.fee_method,
+            fr.refund_target_id,
+            fr.remark,
+            fr.create_time,
+            COALESCE(d.drug_name, mt.tech_name) AS item_name,
+            COALESCE(d.drug_format, mt.tech_format) AS item_format,
+            COALESCE(d.drug_price, mt.tech_price) AS unit_price,
+            COALESCE(p.drug_number, '1') AS quantity,
+            COALESCE(p.drug_state, cr.check_state, ir.inspection_state, dr.disposal_state) AS item_state,
+            dep.dept_name AS dept_name
+        FROM fee_record fr
+        JOIN register r ON fr.register_id = r.id
+        LEFT JOIN prescription p ON fr.item_type = '处方' AND fr.item_id = p.id
+        LEFT JOIN drug_info d ON p.drug_id = d.id
+        LEFT JOIN check_request cr ON fr.item_type = '检查' AND fr.item_id = cr.id
+        LEFT JOIN inspection_request ir ON fr.item_type = '检验' AND fr.item_id = ir.id
+        LEFT JOIN disposal_request dr ON fr.item_type = '处置' AND fr.item_id = dr.id
+        LEFT JOIN medical_technology mt
+               ON mt.id = COALESCE(cr.medical_technology_id, ir.medical_technology_id, dr.medical_technology_id)
+        LEFT JOIN department dep ON dep.id = mt.department_id
+        WHERE r.case_number = #{caseNumber}
+          AND fr.fee_type = '收费'
+          AND fr.item_type IN ('处方', '检查', '检验', '处置')
+          AND NOT EXISTS (
+              SELECT 1 FROM fee_record f2 WHERE f2.refund_target_id = fr.id
+          )
+        ORDER BY fr.id DESC
+    </select>
+
+    <select id="selectItemState" resultType="string">
+        SELECT CASE #{itemType}
+            WHEN '处方' THEN (SELECT drug_state FROM prescription WHERE id = #{itemId})
+            WHEN '检查' THEN (SELECT check_state FROM check_request WHERE id = #{itemId})
+            WHEN '检验' THEN (SELECT inspection_state FROM inspection_request WHERE id = #{itemId})
+            WHEN '处置' THEN (SELECT disposal_state FROM disposal_request WHERE id = #{itemId})
+        END
+    </select>
+
+    <select id="countByRefundTargetId" resultType="int">
+        SELECT COUNT(*) FROM fee_record WHERE refund_target_id = #{refundTargetId}
+    </select>
+</mapper>

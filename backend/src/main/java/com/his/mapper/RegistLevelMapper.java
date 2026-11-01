@@ -7,4 +7,6 @@ import java.util.List;
 public interface RegistLevelMapper {
 
     List<RegistLevel> selectActive();
+
+    RegistLevel selectById(Integer id);
 }

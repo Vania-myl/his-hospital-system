@@ -28,7 +28,10 @@ service.interceptors.response.use(
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       Message.error(res.msg || '登录已过期，请重新登录')
-      router.push('/login')
+      // 已在登录页时避免重复跳转，否则 vue-router 抛 NavigationDuplicated
+      if (router.currentRoute.path !== '/login') {
+        router.push('/login').catch(() => {})
+      }
       return Promise.reject(new Error(res.msg))
     }
     Message.error(res.msg || '请求失败')

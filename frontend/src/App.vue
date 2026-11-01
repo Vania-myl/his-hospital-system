@@ -11,10 +11,5 @@ export default {
 </script>
 
 <style>
-html,
-body,
-#app {
-  height: 100%;
-  margin: 0;
-}
+/* 全局基础样式见 src/styles/index.css */
 </style>

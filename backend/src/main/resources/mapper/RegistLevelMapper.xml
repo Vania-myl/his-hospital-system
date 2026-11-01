@@ -5,4 +5,8 @@
     <select id="selectActive" resultType="com.his.entity.RegistLevel">
         SELECT * FROM regist_level WHERE delmark = 1
     </select>
+
+    <select id="selectById" resultType="com.his.entity.RegistLevel">
+        SELECT * FROM regist_level WHERE id = #{id}
+    </select>
 </mapper>

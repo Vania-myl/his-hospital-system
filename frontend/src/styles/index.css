@@ -1,0 +1,112 @@
+/* ============ 东软云HIS · 蓝白主题全局样式 ============
+ * 依据《系统设计说明书》5.1 用户接口：
+ *   - 界面风格：Element-UI，蓝白为主色调，扁平化、简洁专业
+ *   - 布局规范：顶部导航 + 左侧菜单 + 内容区
+ */
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #303133;
+  background-color: #f0f2f5;
+}
+
+/* 左侧菜单（蓝白主题） */
+.side-menu {
+  border-right: none !important;
+}
+.side-menu .el-menu-item {
+  height: 50px;
+  line-height: 50px;
+  border-left: 3px solid transparent;
+  margin: 2px 0;
+}
+.side-menu .el-menu-item:hover {
+  background-color: #f5f7fa !important;
+}
+.side-menu .el-menu-item.is-active {
+  background-color: #ecf5ff !important;
+  border-left-color: #409eff;
+  font-weight: 600;
+}
+
+/* 通用页面容器 / 卡片 */
+.page-container {
+  padding: 4px;
+}
+.page-card {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  padding: 20px;
+}
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 16px;
+}
+
+/* ============ 挂号收费工作区通用 ============ */
+.search-bar {
+  margin-bottom: 8px;
+}
+.toolbar {
+  margin-bottom: 12px;
+}
+.pager {
+  margin-top: 14px;
+  text-align: right;
+}
+.money {
+  color: #f56c6c;
+  font-weight: 600;
+}
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
+  border-left: 3px solid #409eff;
+  padding-left: 8px;
+  margin: 6px 0 16px;
+}
+.patient-bar {
+  background: #ecf5ff;
+  border: 1px solid #d9ecff;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #303133;
+}
+.patient-bar span {
+  margin-right: 24px;
+}
+.patient-bar b {
+  color: #409eff;
+}
+.charge-footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.charge-footer .total {
+  font-size: 14px;
+  color: #303133;
+}
+.charge-footer .money {
+  font-size: 18px;
+}
+.level-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.6;
+}

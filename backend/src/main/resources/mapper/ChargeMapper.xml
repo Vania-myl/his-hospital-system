@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.ChargeMapper">
+
+    <select id="selectPendingPrescription" resultType="com.his.register.dto.ChargeItemVO">
+        SELECT '处方' AS item_type,
+               p.id AS item_id,
+               d.drug_name AS item_name,
+               d.drug_price AS unit_price,
+               p.drug_number AS quantity
+        FROM prescription p
+        JOIN drug_info d ON p.drug_id = d.id
+        WHERE p.register_id = #{registerId}
+          AND p.drug_state = '1'
+          AND NOT EXISTS (
+              SELECT 1 FROM fee_record f
+              WHERE f.item_type = '处方' AND f.item_id = p.id AND f.fee_type = '收费'
+          )
+    </select>
+
+    <select id="selectPendingCheck" resultType="com.his.register.dto.ChargeItemVO">
+        SELECT '检查' AS item_type,
+               c.id AS item_id,
+               m.tech_name AS item_name,
+               m.tech_price AS unit_price
+        FROM check_request c
+        JOIN medical_technology m ON c.medical_technology_id = m.id
+        WHERE c.register_id = #{registerId}
+          AND c.check_state = '1'
+          AND NOT EXISTS (
+              SELECT 1 FROM fee_record f
+              WHERE f.item_type = '检查' AND f.item_id = c.id AND f.fee_type = '收费'
+          )
+    </select>
+
+    <select id="selectPendingInspection" resultType="com.his.register.dto.ChargeItemVO">
+        SELECT '检验' AS item_type,
+               i.id AS item_id,
+               m.tech_name AS item_name,
+               m.tech_price AS unit_price
+        FROM inspection_request i
+        JOIN medical_technology m ON i.medical_technology_id = m.id
+        WHERE i.register_id = #{registerId}
+          AND i.inspection_state = '1'
+          AND NOT EXISTS (
+              SELECT 1 FROM fee_record f
+              WHERE f.item_type = '检验' AND f.item_id = i.id AND f.fee_type = '收费'
+          )
+    </select>
+
+    <select id="selectPendingDisposal" resultType="com.his.register.dto.ChargeItemVO">
+        SELECT '处置' AS item_type,
+               d.id AS item_id,
+               m.tech_name AS item_name,
+               m.tech_price AS unit_price
+        FROM disposal_request d
+        JOIN medical_technology m ON d.medical_technology_id = m.id
+        WHERE d.register_id = #{registerId}
+          AND d.disposal_state = '1'
+          AND NOT EXISTS (
+              SELECT 1 FROM fee_record f
+              WHERE f.item_type = '处置' AND f.item_id = d.id AND f.fee_type = '收费'
+          )
+    </select>
+</mapper>

@@ -1,10 +1,9 @@
-// 综合管理模块路由
+// 综合管理模块路由（管理人员 admin）—— 业务数据统计
 export default [
-  // 示例：
-  // {
-  //   path: 'statistics',
-  //   name: 'Statistics',
-  //   component: () => import('@/views/statistics/Statistics.vue'),
-  //   meta: { title: '综合管理', icon: 'el-icon-data-analysis' }
-  // }
+  {
+    path: 'statistics',
+    name: 'Statistics',
+    component: () => import('@/views/statistics/Statistics.vue'),
+    meta: { title: '业务数据统计', icon: 'el-icon-data-analysis', roles: ['admin'] }
+  }
 ]

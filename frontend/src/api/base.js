@@ -24,3 +24,18 @@ export function schedulingList() {
 export function employeeList() {
   return service.get('/employee/list')
 }
+
+// 医技项目列表
+export function medicalTechnologyList() {
+  return service.get('/medical-technology/list')
+}
+
+// 疾病列表
+export function diseaseList() {
+  return service.get('/disease/list')
+}
+
+// 药品列表
+export function drugList() {
+  return service.get('/drug/list')
+}
