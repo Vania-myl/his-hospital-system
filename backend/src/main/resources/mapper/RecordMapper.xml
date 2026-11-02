@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.RecordMapper">
+
+    <select id="selectHistory" resultType="com.his.record.dto.RecordHistoryVO">
+        SELECT
+            r.id AS registerId,
+            r.case_number AS caseNumber,
+            r.real_name AS realName,
+            r.gender AS gender,
+            r.age AS age,
+            dep.dept_name AS deptName,
+            lv.regist_name AS registLevelName,
+            DATE_FORMAT(r.visit_date, '%Y-%m-%d %H:%i') AS visitDate,
+            r.noon AS noon,
+            r.visit_state AS visitState,
+            IFNULL((SELECT SUM(f2.fee_amount) FROM fee_record f2
+                    WHERE f2.register_id = r.id AND f2.fee_type = '收费'), 0) AS chargeAmount
+        FROM register r
+        LEFT JOIN department dep ON r.department_id = dep.id
+        LEFT JOIN regist_level lv ON r.regist_level_id = lv.id
+        <where>
+            <if test="caseNumber != null and caseNumber != ''">
+                AND r.case_number = #{caseNumber}
+            </if>
+            <if test="realName != null and realName != ''">
+                AND r.real_name LIKE CONCAT('%', #{realName}, '%')
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(r.visit_date) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(r.visit_date) &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY r.visit_date DESC
+        <if test="offset != null and size != null">
+            LIMIT #{offset}, #{size}
+        </if>
+    </select>
+
+    <select id="countHistory" resultType="int">
+        SELECT COUNT(*) FROM register r
+        <where>
+            <if test="caseNumber != null and caseNumber != ''">
+                AND r.case_number = #{caseNumber}
+            </if>
+            <if test="realName != null and realName != ''">
+                AND r.real_name LIKE CONCAT('%', #{realName}, '%')
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(r.visit_date) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(r.visit_date) &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectRegisterBase" resultType="com.his.record.dto.RecordFlowDTO">
+        SELECT
+            r.id AS registerId,
+            r.case_number AS caseNumber,
+            r.real_name AS realName,
+            r.gender AS gender,
+            r.age AS age,
+            r.card_number AS cardNumber,
+            dep.dept_name AS deptName,
+            lv.regist_name AS registLevelName,
+            DATE_FORMAT(r.visit_date, '%Y-%m-%d %H:%i') AS visitDate,
+            r.noon AS noon,
+            r.visit_state AS visitState,
+            r.regist_money AS registMoney,
+            IFNULL((SELECT SUM(f2.fee_amount) FROM fee_record f2
+                    WHERE f2.register_id = r.id AND f2.fee_type = '收费'), 0) AS chargeAmount
+        FROM register r
+        LEFT JOIN department dep ON r.department_id = dep.id
+        LEFT JOIN regist_level lv ON r.regist_level_id = lv.id
+        WHERE r.id = #{registerId}
+    </select>
+
+    <select id="selectMedicalRecordByRegisterId" resultType="com.his.entity.MedicalRecord">
+        SELECT * FROM medical_record WHERE register_id = #{registerId}
+    </select>
+
+    <select id="selectDiseasesByRegisterId" resultType="string">
+        SELECT d.disease_name
+        FROM medical_record_disease mrd
+        JOIN disease d ON mrd.disease_id = d.id
+        WHERE mrd.medical_record_id = (
+            SELECT id FROM medical_record WHERE register_id = #{registerId}
+        )
+        ORDER BY d.id
+    </select>
+
+    <select id="selectFlowItems" resultType="com.his.record.dto.FlowItemVO">
+        SELECT
+            '检查' AS itemType,
+            mt.tech_name AS techName,
+            cr.check_state AS state,
+            DATE_FORMAT(cr.creation_time, '%Y-%m-%d %H:%i') AS creationTime,
+            cr.check_result AS result
+        FROM check_request cr
+        LEFT JOIN medical_technology mt ON cr.medical_technology_id = mt.id
+        WHERE cr.register_id = #{registerId}
+        UNION ALL
+        SELECT
+            '检验' AS itemType,
+            mt.tech_name AS techName,
+            ir.inspection_state AS state,
+            DATE_FORMAT(ir.creation_time, '%Y-%m-%d %H:%i') AS creationTime,
+            ir.inspection_result AS result
+        FROM inspection_request ir
+        LEFT JOIN medical_technology mt ON ir.medical_technology_id = mt.id
+        WHERE ir.register_id = #{registerId}
+        UNION ALL
+        SELECT
+            '处置' AS itemType,
+            mt.tech_name AS techName,
+            dr.disposal_state AS state,
+            DATE_FORMAT(dr.creation_time, '%Y-%m-%d %H:%i') AS creationTime,
+            dr.disposal_result AS result
+        FROM disposal_request dr
+        LEFT JOIN medical_technology mt ON dr.medical_technology_id = mt.id
+        WHERE dr.register_id = #{registerId}
+    </select>
+
+    <select id="selectFlowPrescriptions" resultType="com.his.record.dto.FlowPrescriptionVO">
+        SELECT
+            d.drug_name AS drugName,
+            d.drug_format AS drugFormat,
+            p.drug_usage AS drugUsage,
+            p.drug_number AS drugNumber,
+            d.drug_price AS drugPrice,
+            p.drug_state AS state,
+            DATE_FORMAT(p.creation_time, '%Y-%m-%d %H:%i') AS creationTime
+        FROM prescription p
+        LEFT JOIN drug_info d ON p.drug_id = d.id
+        WHERE p.register_id = #{registerId}
+        ORDER BY p.id
+    </select>
+</mapper>

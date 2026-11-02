@@ -74,4 +74,54 @@
     <update id="updateVisitState">
         UPDATE register SET visit_state = #{visitState} WHERE id = #{id}
     </update>
+
+    <select id="countRegister" resultType="int">
+        SELECT COUNT(*) FROM register
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(visit_date) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(visit_date) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
+
+    <select id="countRegisterRefund" resultType="int">
+        SELECT COUNT(*) FROM register
+        <where>
+            visit_state = 4
+            <if test="startDate != null and startDate != ''">
+                AND DATE(visit_date) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(visit_date) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
+
+    <select id="countGroupByDept" resultType="com.his.statistics.dto.DeptCountVO">
+        SELECT COALESCE(d.dept_name, '未分配') AS deptName, COUNT(*) AS `count`
+        FROM register r
+        LEFT JOIN department d ON r.department_id = d.id
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(r.visit_date) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(r.visit_date) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND r.department_id = #{departmentId}
+            </if>
+        </where>
+        GROUP BY r.department_id, d.dept_name
+        ORDER BY `count` DESC
+    </select>
 </mapper>
