@@ -44,6 +44,7 @@ const router = new VueRouter({
 const ROLE_HOME = {
   window: '/register',
   doctor: '/outpatient',
+  pharmacy: '/pharmacy/dispense',
   admin: '/statistics'
 }
 // 路由守卫：登录校验 + 角色权限（admin 可访问全部）
