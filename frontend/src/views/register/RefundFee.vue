@@ -23,7 +23,7 @@
       </el-table-column>
       <el-table-column label="状态" width="110">
         <template slot-scope="{ row }">
-          <el-tag :type="row.itemState === '1' ? 'success' : 'info'" size="mini">{{ stateText(row.itemState) }}</el-tag>
+          <el-tag :type="canRefund(row) ? 'success' : 'info'" size="mini">{{ stateText(row) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="金额" width="100">
@@ -31,7 +31,7 @@
       </el-table-column>
       <el-table-column label="操作" width="90" fixed="right">
         <template slot-scope="{ row }">
-          <el-button type="text" size="small" :disabled="row.itemState !== '1'" @click="handleRefund(row)">退费</el-button>
+          <el-button type="text" size="small" :disabled="!canRefund(row)" @click="handleRefund(row)">退费</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -70,8 +70,14 @@ export default {
       this.caseNumber = ''
       this.list = []
     },
-    stateText(s) {
-      return { 1: '已开立', 2: '已执行', 3: '已完成', 4: '已撤销' }[s] || '未知'
+    canRefund(row) {
+      return row.itemState === '1' || (row.itemType === '处方' && row.itemState === '3')
+    },
+    stateText(row) {
+      const labels = row.itemType === '处方'
+        ? { 1: '已开立', 2: '已发药', 3: '已退药', 4: '已撤销' }
+        : { 1: '已开立', 2: '已执行', 3: '已完成', 4: '已撤销' }
+      return labels[row.itemState] || '未知'
     },
     handleRefund(row) {
       this.$confirm(`确认对「${row.itemName}」退费 ¥${Number(row.feeAmount).toFixed(2)}？`, '退费确认', { type: 'warning' })

@@ -43,6 +43,8 @@ const router = new VueRouter({
 // 各岗位登录后的默认落地页（其他岗位模块实现后在此补充）
 const ROLE_HOME = {
   window: '/register',
+  doctor: '/outpatient',
+  pharmacy: '/pharmacy/dispense',
   admin: '/record/flow'
 }
 

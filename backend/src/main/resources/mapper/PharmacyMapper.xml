@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.PharmacyMapper">
+ <sql id="paid">EXISTS(SELECT 1 FROM fee_record f WHERE f.register_id=p.register_id AND f.item_type='处方' AND f.item_id=p.id
+ AND f.fee_type='收费' AND f.fee_amount &gt;= COALESCE(p.unit_price,d.drug_price)*CAST(p.drug_number AS DECIMAL(10,0))
+ AND NOT EXISTS(SELECT 1 FROM fee_record rf WHERE rf.refund_target_id=f.id))</sql>
+ <sql id="prescriptionWhere">WHERE 1=1
+ <if test="keyword != null and keyword != ''">AND (r.case_number LIKE CONCAT('%',#{keyword},'%') OR r.real_name LIKE CONCAT('%',#{keyword},'%') OR d.drug_name LIKE CONCAT('%',#{keyword},'%') OR CAST(p.id AS CHAR)=#{keyword})</if>
+ <if test="drugState != null and drugState != ''">AND p.drug_state=#{drugState}</if>
+ <if test="registerId != null">AND p.register_id=#{registerId}</if>
+ <if test="date != null and date != ''">AND DATE(p.creation_time)=#{date}</if>
+ <if test="paid != null and paid">AND <include refid="paid"/></if>
+ <if test="paid != null and !paid">AND NOT (<include refid="paid"/>)</if>
+ </sql>
+ <sql id="prescriptionFrom">FROM prescription p JOIN drug_info d ON d.id=p.drug_id JOIN register r ON r.id=p.register_id</sql>
+ <select id="prescriptions" resultType="map">SELECT p.id,p.register_id AS `registerId`,p.drug_id AS `drugId`,
+ p.drug_usage AS `drugUsage`,p.drug_number AS `drugNumber`,p.drug_state AS `drugState`,p.creation_time AS `creationTime`,
+ COALESCE(p.unit_price,d.drug_price) AS `unitPrice`,d.drug_name AS `drugName`,d.drug_format AS `drugFormat`,
+ d.drug_unit AS `drugUnit`,d.stock_quantity AS `stockQuantity`,r.case_number AS `caseNumber`,r.real_name AS `realName`,r.gender,r.age,
+ e.realname AS `doctorName`,(<include refid="paid"/>) AS paid
+ <include refid="prescriptionFrom"/> LEFT JOIN employee e ON e.id=r.employee_id <include refid="prescriptionWhere"/>
+ ORDER BY p.creation_time,p.id LIMIT #{offset},#{size}</select>
+ <select id="prescriptionCount" resultType="int">SELECT COUNT(*) <include refid="prescriptionFrom"/> <include refid="prescriptionWhere"/></select>
+ <select id="prescriptionVisit" resultType="int">SELECT register_id FROM prescription WHERE id=#{id}</select>
+ <select id="prescription" resultType="Prescription">SELECT * FROM prescription WHERE id=#{id} FOR UPDATE</select>
+ <insert id="insertPrescription" useGeneratedKeys="true" keyProperty="id">INSERT INTO prescription(register_id,drug_id,drug_usage,drug_number,drug_state,unit_price,creation_time)
+ VALUES(#{registerId},#{drugId},#{drugUsage},#{drugNumber},'1',#{unitPrice},NOW())</insert>
+ <update id="state">UPDATE prescription SET drug_state=#{next} WHERE id=#{id} AND drug_state=#{expected}</update>
+ <select id="effectiveCharges" resultType="FeeRecord">SELECT f.* FROM fee_record f WHERE f.register_id=#{registerId} AND f.item_type=#{type}
+ AND f.item_id=#{itemId} AND f.fee_type='收费' AND NOT EXISTS(SELECT 1 FROM fee_record rf WHERE rf.refund_target_id=f.id) ORDER BY f.id</select>
+ <select id="drug" resultType="DrugInfo">SELECT * FROM drug_info WHERE id=#{id} FOR UPDATE</select>
+ <sql id="drugWhere">WHERE 1=1 <if test="keyword != null and keyword != ''">AND (drug_code LIKE CONCAT('%',#{keyword},'%') OR drug_name LIKE CONCAT('%',#{keyword},'%') OR mnemonic_code LIKE CONCAT('%',#{keyword},'%'))</if></sql>
+ <select id="drugs" resultType="DrugInfo">SELECT * FROM drug_info <include refid="drugWhere"/> ORDER BY id DESC LIMIT #{offset},#{size}</select>
+ <select id="drugCount" resultType="int">SELECT COUNT(*) FROM drug_info <include refid="drugWhere"/></select>
+ <insert id="insertDrug" useGeneratedKeys="true" keyProperty="id">INSERT INTO drug_info(drug_code,drug_name,drug_format,drug_unit,manufacturer,drug_dosage,drug_type,drug_price,mnemonic_code,creation_date,delmark,stock_quantity)
+ VALUES(#{drugCode},#{drugName},#{drugFormat},#{drugUnit},#{manufacturer},#{drugDosage},#{drugType},#{drugPrice},#{mnemonicCode},CURDATE(),1,0)</insert>
+ <update id="updateDrug">UPDATE drug_info SET drug_code=#{drugCode},drug_name=#{drugName},drug_format=#{drugFormat},drug_unit=#{drugUnit},manufacturer=#{manufacturer},
+ drug_dosage=#{drugDosage},drug_type=#{drugType},drug_price=#{drugPrice},mnemonic_code=#{mnemonicCode} WHERE id=#{id}</update>
+ <select id="codeCount" resultType="int">SELECT COUNT(*) FROM drug_info WHERE drug_code=#{code} <if test="id != null">AND id != #{id}</if></select>
+ <select id="pendingCount" resultType="int">SELECT COUNT(*) FROM prescription WHERE drug_id=#{drugId} AND drug_state='1'</select>
+ <update id="disable">UPDATE drug_info SET delmark=0 WHERE id=#{id} AND delmark=1</update>
+ <update id="stock">UPDATE drug_info SET stock_quantity=stock_quantity+#{delta} WHERE id=#{id} AND stock_quantity+#{delta} BETWEEN 0 AND 1000000</update>
+ <insert id="transaction">INSERT INTO drug_transaction(drug_id,prescription_id,transaction_type,quantity,stock_after,reason,operator_id,create_time)
+ VALUES(#{drugId},#{prescriptionId},#{type},#{quantity},#{stockAfter},#{reason},#{operatorId},NOW())</insert>
+ <sql id="transactionWhere">WHERE 1=1
+ <if test="keyword != null and keyword != ''">AND (d.drug_name LIKE CONCAT('%',#{keyword},'%') OR r.case_number LIKE CONCAT('%',#{keyword},'%') OR r.real_name LIKE CONCAT('%',#{keyword},'%') OR CAST(t.prescription_id AS CHAR)=#{keyword})</if>
+ <if test="type != null and type != ''">AND t.transaction_type=#{type}</if>
+ <if test="date != null and date != ''">AND DATE(t.create_time)=#{date}</if></sql>
+ <sql id="transactionFrom">FROM drug_transaction t JOIN drug_info d ON d.id=t.drug_id LEFT JOIN prescription p ON p.id=t.prescription_id LEFT JOIN register r ON r.id=p.register_id LEFT JOIN employee e ON e.id=t.operator_id</sql>
+ <select id="transactions" resultType="map">SELECT t.id,t.drug_id AS `drugId`,t.prescription_id AS `prescriptionId`,t.transaction_type AS type,t.quantity,
+ t.stock_after AS `stockAfter`,t.reason,t.create_time AS `createTime`,d.drug_name AS `drugName`,r.case_number AS `caseNumber`,r.real_name AS `realName`,e.realname AS `operatorName`
+ <include refid="transactionFrom"/> <include refid="transactionWhere"/> ORDER BY t.id DESC LIMIT #{offset},#{size}</select>
+ <select id="transactionCount" resultType="int">SELECT COUNT(*) <include refid="transactionFrom"/> <include refid="transactionWhere"/></select>
+</mapper>

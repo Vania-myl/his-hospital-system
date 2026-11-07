@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.OutpatientMapper">
+ <sql id="waitingWhere">
+ WHERE r.employee_id=#{doctorId} AND r.visit_state != 4
+ <if test="q.keyword != null and q.keyword != ''">AND (r.case_number LIKE CONCAT('%',#{q.keyword},'%') OR r.real_name LIKE CONCAT('%',#{q.keyword},'%'))</if>
+ <if test="q.date != null and q.date != ''">AND DATE(r.visit_date)=#{q.date}</if>
+ <if test="q.noon != null and q.noon != ''">AND r.noon=#{q.noon}</if>
+ <if test="q.visitState != null">AND r.visit_state=#{q.visitState}</if>
+ </sql>
+ <select id="waiting" resultType="map">
+ SELECT r.id, r.case_number AS `caseNumber`,r.real_name AS `realName`,r.gender,r.age,r.noon,
+ r.visit_date AS `visitDate`,r.visit_state AS `visitState`, COALESCE(qs.queue_state,'waiting') AS `queueState`
+ FROM register r LEFT JOIN outpatient_queue qs ON qs.register_id=r.id
+ <include refid="waitingWhere"/> ORDER BY r.visit_date,r.id LIMIT #{q.offset},#{q.size}
+ </select>
+ <select id="waitingCount" resultType="int">SELECT COUNT(*) FROM register r <include refid="waitingWhere"/></select>
+ <insert id="queue">INSERT INTO outpatient_queue(register_id,queue_state,updated_by,updated_at)
+ VALUES(#{registerId},#{state},#{operatorId},NOW()) ON DUPLICATE KEY UPDATE queue_state=#{state},updated_by=#{operatorId},updated_at=NOW()</insert>
+ <select id="record" resultType="MedicalRecord">SELECT * FROM medical_record WHERE register_id=#{registerId}</select>
+ <select id="recordById" resultType="MedicalRecord">SELECT * FROM medical_record WHERE id=#{id}</select>
+ <insert id="insertRecord" useGeneratedKeys="true" keyProperty="id">
+ INSERT INTO medical_record(register_id,readme,present,present_treat,history,allergy,physique,proposal,careful,diagnosis,cure,
+ version,diagnosis_state,created_by,created_at,updated_by,updated_at)
+ VALUES(#{registerId},#{readme},#{present},#{presentTreat},#{history},#{allergy},#{physique},#{proposal},#{careful},#{diagnosis},#{cure},
+ #{version},#{diagnosisState},#{createdBy},NOW(),#{updatedBy},NOW())
+ </insert>
+ <update id="updateRecord">UPDATE medical_record SET readme=#{readme},present=#{present},present_treat=#{presentTreat},history=#{history},
+ allergy=#{allergy},physique=#{physique},proposal=#{proposal},careful=#{careful},diagnosis=#{diagnosis},cure=#{cure},
+ diagnosis_state=#{diagnosisState},updated_by=#{updatedBy},updated_at=NOW(),version=version+1
+ WHERE id=#{id} AND version=#{version}</update>
+ <delete id="clearDiseases">DELETE FROM medical_record_disease WHERE medical_record_id=#{recordId}</delete>
+ <insert id="addDisease">INSERT INTO medical_record_disease(medical_record_id,disease_id) VALUES(#{recordId},#{diseaseId})</insert>
+ <select id="diseaseIds" resultType="int">SELECT disease_id FROM medical_record_disease WHERE medical_record_id=#{recordId} ORDER BY disease_id</select>
+ <select id="diseaseExists" resultType="int">SELECT COUNT(*) FROM disease WHERE id=#{diseaseId}</select>
+ <insert id="revision">INSERT INTO medical_record_revision(medical_record_id,version,content,operator_id,create_time)
+ VALUES(#{recordId},#{version},#{content},#{operatorId},NOW())</insert>
+ <select id="revisions" resultType="map">SELECT version,content,operator_id AS `operatorId`,create_time AS `createTime`
+ FROM medical_record_revision WHERE medical_record_id=#{recordId} ORDER BY version DESC</select>
+ <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id"><choose>
+<when test="kind == 'check'">INSERT INTO check_request(register_id,medical_technology_id,check_info,check_position,creation_time,check_state)
+ VALUES(#{registerId},#{medicalTechnologyId},#{info},#{position},NOW(),'1')</when>
+<when test="kind == 'inspection'">INSERT INTO inspection_request(register_id,medical_technology_id,inspection_info,inspection_position,creation_time,inspection_state)
+ VALUES(#{registerId},#{medicalTechnologyId},#{info},#{position},NOW(),'1')</when>
+<when test="kind == 'disposal'">INSERT INTO disposal_request(register_id,medical_technology_id,disposal_info,disposal_position,creation_time,disposal_state)
+ VALUES(#{registerId},#{medicalTechnologyId},#{info},#{position},NOW(),'1')</when>
+ </choose></insert>
+ <select id="order" resultType="map" flushCache="true"><choose>
+<when test="kind == 'check'">SELECT a.id,a.register_id AS `registerId`,a.medical_technology_id AS `medicalTechnologyId`,
+ a.check_info AS info,a.check_position AS position,a.check_state AS state,a.check_result AS result,
+ a.creation_time AS `creationTime`,a.check_time AS `executionTime`,mt.tech_name AS `techName`,'check' AS kind
+ FROM check_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.id=#{id}</when>
+<when test="kind == 'inspection'">SELECT a.id,a.register_id AS `registerId`,a.medical_technology_id AS `medicalTechnologyId`,
+ a.inspection_info AS info,a.inspection_position AS position,a.inspection_state AS state,a.inspection_result AS result,
+ a.creation_time AS `creationTime`,a.inspection_time AS `executionTime`,mt.tech_name AS `techName`,'inspection' AS kind
+ FROM inspection_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.id=#{id}</when>
+<when test="kind == 'disposal'">SELECT a.id,a.register_id AS `registerId`,a.medical_technology_id AS `medicalTechnologyId`,
+ a.disposal_info AS info,a.disposal_position AS position,a.disposal_state AS state,a.disposal_result AS result,
+ a.creation_time AS `creationTime`,a.disposal_time AS `executionTime`,mt.tech_name AS `techName`,'disposal' AS kind
+ FROM disposal_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.id=#{id}</when>
+ </choose></select>
+ <select id="orders" resultType="map">
+SELECT a.id,a.register_id AS `registerId`,mt.tech_name AS `techName`,'check' AS kind,
+ a.check_info AS info,a.check_position AS position,a.check_state AS state,a.check_result AS result,
+ a.creation_time AS `creationTime`,a.check_time AS `executionTime`
+ FROM check_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ UNION ALL
+SELECT a.id,a.register_id AS `registerId`,mt.tech_name AS `techName`,'inspection' AS kind,
+ a.inspection_info AS info,a.inspection_position AS position,a.inspection_state AS state,a.inspection_result AS result,
+ a.creation_time AS `creationTime`,a.inspection_time AS `executionTime`
+ FROM inspection_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ UNION ALL
+SELECT a.id,a.register_id AS `registerId`,mt.tech_name AS `techName`,'disposal' AS kind,
+ a.disposal_info AS info,a.disposal_position AS position,a.disposal_state AS state,a.disposal_result AS result,
+ a.creation_time AS `creationTime`,a.disposal_time AS `executionTime`
+ FROM disposal_request a JOIN medical_technology mt ON mt.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ ORDER BY `creationTime` DESC </select>
+ <update id="cancelOrder"><choose>
+<when test="kind == 'check'">UPDATE check_request SET check_state='4' WHERE id=#{id} AND check_state='1'</when>
+<when test="kind == 'inspection'">UPDATE inspection_request SET inspection_state='4' WHERE id=#{id} AND inspection_state='1'</when>
+<when test="kind == 'disposal'">UPDATE disposal_request SET disposal_state='4' WHERE id=#{id} AND disposal_state='1'</when>
+ </choose></update>
+ <select id="fees" resultType="map">SELECT id,item_type AS `itemType`,item_id AS `itemId`,fee_type AS `feeType`,
+ fee_amount AS `feeAmount`,fee_method AS `feeMethod`,create_time AS `createTime` FROM fee_record WHERE register_id=#{registerId} ORDER BY id DESC</select>
+ <select id="feeItems" resultType="map">
+ SELECT p.id,'处方' AS `itemType`,d.drug_name AS `itemName`,p.drug_state AS state,
+ COALESCE(p.unit_price,d.drug_price)*CAST(p.drug_number AS DECIMAL(10,0)) AS amount,
+ (SELECT COALESCE(SUM(CASE WHEN f.fee_type='收费' THEN f.fee_amount ELSE -f.fee_amount END),0)
+ FROM fee_record f WHERE f.register_id=p.register_id AND f.item_type='处方' AND f.item_id=p.id) AS `paidAmount`
+ FROM prescription p JOIN drug_info d ON d.id=p.drug_id WHERE p.register_id=#{registerId}
+ UNION ALL SELECT a.id,'检查' AS `itemType`,m.tech_name AS `itemName`,a.check_state AS state,m.tech_price AS amount,
+ (SELECT COALESCE(SUM(CASE WHEN f.fee_type='收费' THEN f.fee_amount ELSE -f.fee_amount END),0)
+ FROM fee_record f WHERE f.register_id=a.register_id AND f.item_type='检查' AND f.item_id=a.id) AS `paidAmount`
+ FROM check_request a JOIN medical_technology m ON m.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ UNION ALL SELECT a.id,'检验' AS `itemType`,m.tech_name AS `itemName`,a.inspection_state AS state,m.tech_price AS amount,
+ (SELECT COALESCE(SUM(CASE WHEN f.fee_type='收费' THEN f.fee_amount ELSE -f.fee_amount END),0)
+ FROM fee_record f WHERE f.register_id=a.register_id AND f.item_type='检验' AND f.item_id=a.id) AS `paidAmount`
+ FROM inspection_request a JOIN medical_technology m ON m.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ UNION ALL SELECT a.id,'处置' AS `itemType`,m.tech_name AS `itemName`,a.disposal_state AS state,m.tech_price AS amount,
+ (SELECT COALESCE(SUM(CASE WHEN f.fee_type='收费' THEN f.fee_amount ELSE -f.fee_amount END),0)
+ FROM fee_record f WHERE f.register_id=a.register_id AND f.item_type='处置' AND f.item_id=a.id) AS `paidAmount`
+ FROM disposal_request a JOIN medical_technology m ON m.id=a.medical_technology_id WHERE a.register_id=#{registerId}
+ </select>
+</mapper>

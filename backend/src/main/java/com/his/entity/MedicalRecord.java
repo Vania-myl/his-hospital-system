@@ -19,4 +19,10 @@ public class MedicalRecord {
     private String careful;
     private String diagnosis;
     private String cure;
+    private Integer version;
+    private Integer diagnosisState;
+    private Integer createdBy;
+    private java.util.Date createdAt;
+    private Integer updatedBy;
+    private java.util.Date updatedAt;
 }

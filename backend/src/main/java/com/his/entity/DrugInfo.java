@@ -21,4 +21,6 @@ public class DrugInfo {
     private BigDecimal drugPrice;
     private String mnemonicCode;
     private Date creationDate;
+    private Integer delmark;
+    private Integer stockQuantity;
 }
