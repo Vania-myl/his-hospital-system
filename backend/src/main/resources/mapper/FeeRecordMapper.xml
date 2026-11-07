@@ -56,6 +56,45 @@
         ORDER BY fr.id DESC
     </select>
 
+    <!-- 某次就诊（register_id）的费用流水明细，联表还原项目名称/规格/单价/数量/状态/科室 -->
+    <select id="selectRecordsByRegisterId" resultType="com.his.register.dto.FeeRecordVO">
+        SELECT
+            fr.id,
+            fr.register_id,
+            r.case_number,
+            r.real_name,
+            r.gender,
+            r.age,
+            r.card_number,
+            fr.item_type,
+            fr.item_id,
+            fr.fee_type,
+            fr.fee_amount,
+            fr.fee_method,
+            fr.refund_target_id,
+            fr.remark,
+            fr.create_time,
+            COALESCE(d.drug_name, mt.tech_name, lv.regist_name) AS item_name,
+            COALESCE(d.drug_format, mt.tech_format) AS item_format,
+            COALESCE(d.drug_price, mt.tech_price, lv.regist_fee) AS unit_price,
+            COALESCE(p.drug_number, '1') AS quantity,
+            COALESCE(p.drug_state, cr.check_state, ir.inspection_state, dr.disposal_state) AS item_state,
+            dep.dept_name AS dept_name
+        FROM fee_record fr
+        JOIN register r ON fr.register_id = r.id
+        LEFT JOIN prescription p ON fr.item_type = '处方' AND fr.item_id = p.id
+        LEFT JOIN drug_info d ON p.drug_id = d.id
+        LEFT JOIN check_request cr ON fr.item_type = '检查' AND fr.item_id = cr.id
+        LEFT JOIN inspection_request ir ON fr.item_type = '检验' AND fr.item_id = ir.id
+        LEFT JOIN disposal_request dr ON fr.item_type = '处置' AND fr.item_id = dr.id
+        LEFT JOIN medical_technology mt
+               ON mt.id = COALESCE(cr.medical_technology_id, ir.medical_technology_id, dr.medical_technology_id)
+        LEFT JOIN department dep ON dep.id = mt.department_id
+        LEFT JOIN regist_level lv ON fr.item_type = '挂号费' AND lv.id = r.regist_level_id
+        WHERE fr.register_id = #{registerId}
+        ORDER BY fr.id DESC
+    </select>
+
     <!-- 退费列表：某患者已收费（处方/检查/检验/处置）且尚未退费的记录 -->
     <select id="selectRefundableByCaseNumber" resultType="com.his.register.dto.FeeRecordVO">
         SELECT
@@ -110,5 +149,60 @@
 
     <select id="countByRefundTargetId" resultType="int">
         SELECT COUNT(*) FROM fee_record WHERE refund_target_id = #{refundTargetId}
+    </select>
+
+    <select id="sumChargeAmount" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(fr.fee_amount), 0)
+        FROM fee_record fr
+        LEFT JOIN register r ON fr.register_id = r.id
+        <where>
+            fr.fee_type = '收费'
+            <if test="startDate != null and startDate != ''">
+                AND DATE(fr.create_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(fr.create_time) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND r.department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
+
+    <select id="sumRefundAmount" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(fr.fee_amount), 0)
+        FROM fee_record fr
+        LEFT JOIN register r ON fr.register_id = r.id
+        <where>
+            fr.fee_type = '退费'
+            <if test="startDate != null and startDate != ''">
+                AND DATE(fr.create_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(fr.create_time) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND r.department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
+
+    <select id="groupByItemType" resultType="com.his.statistics.dto.ItemAmountVO">
+        SELECT fr.item_type AS itemType, SUM(fr.fee_amount) AS amount
+        FROM fee_record fr
+        LEFT JOIN register r ON fr.register_id = r.id
+        <where>
+            fr.fee_type = '收费'
+            <if test="startDate != null and startDate != ''">
+                AND DATE(fr.create_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(fr.create_time) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND r.department_id = #{departmentId}
+            </if>
+        </where>
+        GROUP BY fr.item_type
     </select>
 </mapper>

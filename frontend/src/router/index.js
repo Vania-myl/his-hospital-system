@@ -24,8 +24,8 @@ const routes = [
     children: [
       ...baseRoutes,
       ...registerRoutes,
-      ...recordRoutes,
       ...statisticsRoutes,
+      ...recordRoutes,
       ...outpatientRoutes,
       ...pharmacyRoutes,
       ...checkRoutes,
@@ -45,9 +45,8 @@ const ROLE_HOME = {
   window: '/register',
   doctor: '/outpatient',
   pharmacy: '/pharmacy/dispense',
-  admin: '/record/flow'
+  admin: '/statistics'
 }
-
 // 路由守卫：登录校验 + 角色权限（admin 可访问全部）
 router.beforeEach((to, from, next) => {
   if (to.path === '/login') {
