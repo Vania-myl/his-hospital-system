@@ -28,6 +28,8 @@ import java.util.Map;
 public class ChargeServiceImpl implements ChargeService {
 
     @Autowired
+    private com.his.mapper.BusinessLockMapper businessLocks;
+    @Autowired
     private ChargeMapper chargeMapper;
     @Autowired
     private RegisterMapper registerMapper;
@@ -36,6 +38,7 @@ public class ChargeServiceImpl implements ChargeService {
 
     @Override
     public List<ChargeItemVO> pending(String caseNumber) {
+        com.his.common.util.RoleAccess.role("window");
         Register register = requireRegister(caseNumber);
         List<ChargeItemVO> items = loadPending(register.getId());
         for (ChargeItemVO vo : items) {
@@ -45,12 +48,25 @@ public class ChargeServiceImpl implements ChargeService {
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public List<FeeRecord> charge(ChargeDTO dto) {
+        com.his.common.util.RoleAccess.role("window");
         if (dto == null || dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "请选择要收费的项目");
         }
         Register register = requireRegister(dto.getCaseNumber());
+
+        if (!"window".equals(UserContext.get().getRole())) throw new BusinessException(403, "仅收费窗口可以收费");
+        java.util.Set<String> unique = new java.util.HashSet<>();
+        java.util.List<ChargeItemDTO> sorted = new java.util.ArrayList<>(dto.getItems());
+        for (ChargeItemDTO item : sorted) {
+            if (item == null || item.getItemId() == null || item.getItemType() == null)
+                throw new BusinessException("收费项目参数不完整");
+            if (!unique.add(item.getItemType() + ":" + item.getItemId()))
+                throw new BusinessException("同一次请求不能重复选择相同项目");
+        }
+        sorted.sort(java.util.Comparator.comparing(ChargeItemDTO::getItemType).thenComparing(ChargeItemDTO::getItemId));
+        for (ChargeItemDTO item : sorted) businessLocks.item(item.getItemType(), item.getItemId());
 
         // 以「类型:id」为键，建立待收费项目索引（防止重复收费）
         Map<String, ChargeItemVO> pendingMap = new HashMap<>();

@@ -16,4 +16,5 @@ public class Prescription {
     private String drugNumber;
     private Date creationTime;
     private String drugState;
+    private java.math.BigDecimal unitPrice;
 }

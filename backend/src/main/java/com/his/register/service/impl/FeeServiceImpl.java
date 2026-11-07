@@ -23,19 +23,36 @@ import java.util.List;
 public class FeeServiceImpl implements FeeService {
 
     @Autowired
+    private com.his.mapper.BusinessLockMapper businessLocks;
+    @Autowired
     private FeeRecordMapper feeRecordMapper;
     @Autowired
     private RegisterMapper registerMapper;
 
     @Override
     public FeeQueryVO list(String caseNumber) {
+        LoginUser viewer = com.his.common.util.RoleAccess.role("window", "doctor", "pharmacy");
         Register register = requireRegister(caseNumber);
         List<FeeRecordVO> records = feeRecordMapper.selectRecordsByCaseNumber(register.getCaseNumber());
 
+        if ("doctor".equals(viewer.getRole())) {
+            boolean allowed = records.stream().anyMatch(row -> {
+                Register visit = registerMapper.selectById(row.getRegisterId());
+                return visit != null && viewer.getId().equals(visit.getEmployeeId());
+            });
+            if (!allowed) throw new BusinessException(403, "只能查询本人接诊患者费用");
+            records.removeIf(row -> {
+                Register visit = registerMapper.selectById(row.getRegisterId());
+                return visit == null || !viewer.getId().equals(visit.getEmployeeId());
+            });
+        } else if ("pharmacy".equals(viewer.getRole())) {
+            records.removeIf(row -> !"处方".equals(row.getItemType()));
+            for (FeeRecordVO row : records) row.setCardNumber(null);
+        }
         FeeQueryVO vo = new FeeQueryVO();
         vo.setCaseNumber(register.getCaseNumber());
         vo.setRealName(register.getRealName());
-        vo.setCardNumber(register.getCardNumber());
+        vo.setCardNumber("pharmacy".equals(viewer.getRole()) ? null : register.getCardNumber());
         vo.setGender(register.getGender());
         vo.setAge(register.getAge());
 
@@ -59,13 +76,15 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     public List<FeeRecordVO> refundable(String caseNumber) {
+        com.his.common.util.RoleAccess.role("window");
         Register register = requireRegister(caseNumber);
         return feeRecordMapper.selectRefundableByCaseNumber(register.getCaseNumber());
     }
 
     @Override
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void refund(Integer feeRecordId) {
+        com.his.common.util.RoleAccess.role("window");
         FeeRecord fee = feeRecordMapper.selectById(feeRecordId);
         if (fee == null) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "收费记录不存在");
@@ -76,13 +95,15 @@ public class FeeServiceImpl implements FeeService {
         if ("挂号费".equals(fee.getItemType())) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "挂号费请通过退号办理");
         }
+        if (!"window".equals(UserContext.get().getRole())) throw new BusinessException(403, "仅收费窗口可以退费");
+        businessLocks.item(fee.getItemType(), fee.getItemId());
         if (feeRecordMapper.countByRefundTargetId(feeRecordId) > 0) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "该收费记录已退费");
         }
 
         // 已执行 / 已发药的项目不可退费（状态码 1 = 已开立，未消费）
         String state = feeRecordMapper.selectItemState(fee.getItemType(), fee.getItemId());
-        if (state == null || !"1".equals(state)) {
+        if (!("1".equals(state) || ("处方".equals(fee.getItemType()) && "3".equals(state)))) {
             throw new BusinessException(ResultCode.CANNOT_REFUND, "项目已执行 / 已发药，不可退费");
         }
 

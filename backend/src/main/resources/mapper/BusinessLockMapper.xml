@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.his.mapper.BusinessLockMapper">
+<select id="item" resultType="int"><choose>
+<when test="type == '处方'">SELECT id FROM prescription WHERE id=#{id} FOR UPDATE</when>
+<when test="type == '检查'">SELECT id FROM check_request WHERE id=#{id} FOR UPDATE</when>
+<when test="type == '检验'">SELECT id FROM inspection_request WHERE id=#{id} FOR UPDATE</when>
+<when test="type == '处置'">SELECT id FROM disposal_request WHERE id=#{id} FOR UPDATE</when>
+<otherwise>SELECT NULL</otherwise></choose></select>
+</mapper>

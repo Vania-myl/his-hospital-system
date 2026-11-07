@@ -37,7 +37,7 @@
             fr.create_time,
             COALESCE(d.drug_name, mt.tech_name, lv.regist_name) AS item_name,
             COALESCE(d.drug_format, mt.tech_format) AS item_format,
-            COALESCE(d.drug_price, mt.tech_price, lv.regist_fee) AS unit_price,
+            COALESCE(p.unit_price, d.drug_price, mt.tech_price, lv.regist_fee) AS unit_price,
             COALESCE(p.drug_number, '1') AS quantity,
             COALESCE(p.drug_state, cr.check_state, ir.inspection_state, dr.disposal_state) AS item_state,
             dep.dept_name AS dept_name
@@ -115,7 +115,7 @@
             fr.create_time,
             COALESCE(d.drug_name, mt.tech_name) AS item_name,
             COALESCE(d.drug_format, mt.tech_format) AS item_format,
-            COALESCE(d.drug_price, mt.tech_price) AS unit_price,
+            COALESCE(p.unit_price, d.drug_price, mt.tech_price) AS unit_price,
             COALESCE(p.drug_number, '1') AS quantity,
             COALESCE(p.drug_state, cr.check_state, ir.inspection_state, dr.disposal_state) AS item_state,
             dep.dept_name AS dept_name
