@@ -43,9 +43,9 @@ const router = new VueRouter({
 // 各岗位登录后的默认落地页（其他岗位模块实现后在此补充）
 const ROLE_HOME = {
   window: '/register',
+  doctor: '/outpatient',
   admin: '/statistics'
 }
-
 // 路由守卫：登录校验 + 角色权限（admin 可访问全部）
 router.beforeEach((to, from, next) => {
   if (to.path === '/login') {

@@ -1,0 +1,11 @@
+import request from './request'
+export const waiting = params => request.get('/register/waiting', { params })
+export const visitAction = (id, action) => request.put(`/outpatient/visits/${id}/${action}`)
+export const record = id => request.get(`/medical-record/register/${id}`)
+export const saveRecord = data => data.id ? request.put(`/medical-record/${data.id}`, data) : request.post('/medical-record', data)
+export const diagnose = (id, data) => request.put(`/medical-record/${id}/diagnosis`, data)
+export const revisions = id => request.get(`/medical-record/${id}/revisions`)
+export const createOrder = (kind, data) => request.post(`/${kind}-request`, data)
+export const orders = id => request.get(`/outpatient/visits/${id}/requests`)
+export const cancelOrder = (kind, id) => request.put(`/outpatient/requests/${kind}/${id}/cancel`)
+export const fees = id => request.get(`/outpatient/visits/${id}/fees`)
