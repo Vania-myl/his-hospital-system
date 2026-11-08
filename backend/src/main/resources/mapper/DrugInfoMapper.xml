@@ -3,6 +3,6 @@
 <mapper namespace="com.his.mapper.DrugInfoMapper">
 
     <select id="selectAll" resultType="com.his.entity.DrugInfo">
-        SELECT * FROM drug_info
+        SELECT * FROM drug_info WHERE delmark=1 ORDER BY drug_name
     </select>
 </mapper>

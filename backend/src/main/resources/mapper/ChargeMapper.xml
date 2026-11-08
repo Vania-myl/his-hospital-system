@@ -6,7 +6,7 @@
         SELECT '处方' AS item_type,
                p.id AS item_id,
                d.drug_name AS item_name,
-               d.drug_price AS unit_price,
+               COALESCE(p.unit_price, d.drug_price) AS unit_price,
                p.drug_number AS quantity
         FROM prescription p
         JOIN drug_info d ON p.drug_id = d.id

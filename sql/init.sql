@@ -12,6 +12,9 @@
 DROP DATABASE IF EXISTS his;
 CREATE DATABASE his DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 USE his;
+DROP TABLE IF EXISTS outpatient_queue;
+DROP TABLE IF EXISTS medical_record_revision;
+DROP TABLE IF EXISTS drug_transaction;
 
 -- ------------------------------------------------------------
 -- 1. 科室表 department
@@ -209,6 +212,12 @@ CREATE TABLE medical_record (
   careful       VARCHAR(512) DEFAULT NULL COMMENT '注意事项',
   diagnosis     VARCHAR(512) DEFAULT NULL COMMENT '诊断结果',
   cure          VARCHAR(512) DEFAULT NULL COMMENT '处理意见',
+  version INT NOT NULL DEFAULT 0,
+  diagnosis_state INT NOT NULL DEFAULT 0,
+  created_by INT DEFAULT NULL,
+  created_at DATETIME DEFAULT NULL,
+  updated_by INT DEFAULT NULL,
+  updated_at DATETIME DEFAULT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uk_register_id (register_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='患者病历表';
@@ -251,6 +260,8 @@ CREATE TABLE drug_info (
   drug_price    DECIMAL(8,2)  NOT NULL DEFAULT 0.00 COMMENT '药品单价',
   mnemonic_code VARCHAR(255)  DEFAULT NULL COMMENT '拼音助记码',
   creation_date DATE          DEFAULT NULL COMMENT '创建时间',
+  delmark INT NOT NULL DEFAULT 1,
+  stock_quantity INT NOT NULL DEFAULT 0,
   PRIMARY KEY (id),
   UNIQUE KEY uk_drug_code (drug_code),
   KEY idx_drug_name (drug_name),
@@ -268,6 +279,7 @@ CREATE TABLE prescription (
   drug_number   VARCHAR(255) DEFAULT NULL COMMENT '药品数量',
   creation_time DATETIME     NOT NULL COMMENT '开立时间',
   drug_state    VARCHAR(64)  NOT NULL DEFAULT '1' COMMENT '1-已开立 2-已发药 3-已退药 4-已撤销',
+  unit_price DECIMAL(8,2) DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_register_id (register_id),
   KEY idx_drug_id (drug_id)
@@ -356,3 +368,34 @@ INSERT INTO drug_info (drug_code, drug_name, drug_format, drug_unit, manufacture
 ('YP001', '阿莫西林胶囊',     '0.5g',   '盒', '华北制药', '胶囊剂', '西药', 12.50, 'AMXLJN', '2026-10-01'),
 ('YP002', '布洛芬缓释胶囊',   '0.3g',   '盒', '中美史克', '胶囊剂', '西药', 18.00, 'BLFHSJN', '2026-10-01'),
 ('YP003', '连花清瘟胶囊',     '0.35g',  '盒', '以岭药业', '胶囊剂', '中成药', 15.80, 'LHQWJN', '2026-10-01');
+
+CREATE TABLE outpatient_queue (
+  register_id INT NOT NULL PRIMARY KEY,
+  queue_state VARCHAR(16) NOT NULL DEFAULT 'waiting',
+  updated_by INT NOT NULL,
+  updated_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE medical_record_revision (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  medical_record_id INT NOT NULL,
+  version INT NOT NULL,
+  content TEXT NOT NULL,
+  operator_id INT NOT NULL,
+  create_time DATETIME NOT NULL,
+  UNIQUE KEY uk_record_version (medical_record_id, version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE drug_transaction (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  drug_id INT NOT NULL,
+  prescription_id INT DEFAULT NULL,
+  transaction_type VARCHAR(16) NOT NULL,
+  quantity INT NOT NULL,
+  stock_after INT NOT NULL,
+  reason VARCHAR(255) NOT NULL,
+  operator_id INT NOT NULL,
+  create_time DATETIME NOT NULL,
+  KEY idx_prescription (prescription_id),
+  KEY idx_drug (drug_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

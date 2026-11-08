@@ -38,6 +38,7 @@ public class RegisterServiceImpl implements RegisterService {
     @Override
     @Transactional
     public Register register(RegisterDTO dto) {
+        com.his.common.util.RoleAccess.role("window");
         if (dto.getRealName() == null || dto.getRealName().trim().isEmpty()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "患者姓名不能为空");
         }
@@ -105,6 +106,7 @@ public class RegisterServiceImpl implements RegisterService {
 
     @Override
     public List<Register> list(RegisterQueryDTO query) {
+        com.his.common.util.RoleAccess.role("window");
         if (query.getPage() == null || query.getPage() < 1) {
             query.setPage(1);
         }
@@ -117,13 +119,18 @@ public class RegisterServiceImpl implements RegisterService {
 
     @Override
     public int count(RegisterQueryDTO query) {
+        com.his.common.util.RoleAccess.role("window");
         return registerMapper.countList(query);
     }
+
+    @Autowired
+    private com.his.mapper.BusinessLockMapper businessLocks;
 
     @Override
     @Transactional
     public void refund(Integer registerId) {
-        Register register = registerMapper.selectById(registerId);
+        com.his.common.util.RoleAccess.role("window");
+        Register register = businessLocks.register(registerId);
         if (register == null) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "挂号记录不存在");
         }
