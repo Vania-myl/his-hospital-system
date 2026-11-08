@@ -1,12 +1,13 @@
 -- ============================================================
--- 东软云HIS医院管理系统 —— 数据库初始化脚本
+-- 东软云HIS医院管理系统 —— 数据库建表脚本（仅建表，不含数据）
 -- 数据库：his
 -- 目标：MySQL 5.5.x（InnoDB / utf8）
 -- 说明：
---   1) 表间仅逻辑外键（xxx_id），不建物理 FOREIGN KEY（见契约 2.6）
---   2) 字符集用 utf8（3 字节）：MySQL 5.5 索引上限 767 字节，
+--   1) 仅创建表结构；基础数据与演示数据见 demo-data.sql
+--   2) 表间仅逻辑外键（xxx_id），不建物理 FOREIGN KEY（见契约 2.6）
+--   3) 字符集用 utf8（3 字节）：MySQL 5.5 索引上限 767 字节，
 --      utf8mb4 会令 VARCHAR(255) 索引超长，故统一 utf8
---   3) 主键 id 自增；基础数据表带 delmark 软删除标记
+--   4) 主键 id 自增；基础数据表带 delmark 软删除标记
 -- ============================================================
 
 DROP DATABASE IF EXISTS his;
@@ -305,69 +306,6 @@ CREATE TABLE fee_record (
   KEY idx_item (item_type, item_id),
   KEY idx_refund_target_id (refund_target_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='费用流水表';
-
--- ============================================================
--- 初始数据（示例，可按需修改）
--- ============================================================
-
--- 科室
-INSERT INTO department (dept_code, dept_name, dept_type) VALUES
-('SJNK', '神经内科', '临床'),
-('HXNK', '呼吸内科', '临床'),
-('EK',   '儿科',     '临床'),
-('GK',   '骨科',     '临床'),
-('JYK',  '检验科',   '医技'),
-('FSK',  '放射科',   '医技'),
-('YF',   '药房',     '医技');
-
--- 挂号级别
-INSERT INTO regist_level (regist_code, regist_name, regist_fee, regist_quota, sequence_no) VALUES
-('PT', '普通号', 10.00, 50,  1),
-('ZJ', '专家号', 20.00, 30,  2),
-('JZ', '急诊号', 30.00, 100, 3);
-
--- 结算类别
-INSERT INTO settle_category (settle_code, settle_name, sequence_no) VALUES
-('ZF',  '自费',   1),
-('YB',  '医保',   2),
-('XNH', '新农合', 3);
-
--- 排班规则
-INSERT INTO scheduling (rule_name, week_rule) VALUES
-('正常白班', '1,2,3,4,5'),
-('轮班制',   '1,2,3,4,5,6,7');
-
--- 员工（密码示例明文 123456，实际开发用 BCrypt 哈希）
-INSERT INTO employee (username, password, realname, role, department_id, regist_level_id, scheduling_id) VALUES
-('admin',     '123456', '管理员',   'admin',    NULL, NULL, NULL),
-('window01',  '123456', '收费员小王', 'window',   NULL, NULL, NULL),
-('doctor01',  '123456', '张医生',   'doctor',   1,    1,    1),
-('doctor02',  '123456', '李医生',   'doctor',   3,    1,    1),
-('check01',   '123456', '检查医生', 'check',    6,    NULL, NULL),
-('lab01',     '123456', '检验医生', 'lab',      5,    NULL, NULL),
-('treat01',   '123456', '处置医生', 'treat',    4,    NULL, NULL),
-('pharmacy01','123456', '药房人员', 'pharmacy', 7,    NULL, NULL);
-
--- 医技项目
-INSERT INTO medical_technology (tech_code, tech_name, tech_format, tech_price, tech_type, price_type, department_id) VALUES
-('XCG',  '血常规',   '项', 20.00, '检验', '检验费', 5),
-('NCG',  '尿常规',   '项', 15.00, '检验', '检验费', 5),
-('XGX',  '胸部X光',  '次', 80.00, '检查', '检查费', 6),
-('XDT',  '心电图',   '次', 60.00, '检查', '检查费', 6),
-('JMSY', '静脉输液', '次', 25.00, '处置', '处置费', 4),
-('SKHY', '伤口换药', '次', 30.00, '处置', '处置费', 4);
-
--- 疾病
-INSERT INTO disease (disease_code, disease_name, disease_icd, disease_category) VALUES
-('GXY', '高血压',       'I10',  '心血管'),
-('TNB', '糖尿病',       'E11.9','内分泌'),
-('SHDG', '上呼吸道感染', 'J06.9','呼吸');
-
--- 药品
-INSERT INTO drug_info (drug_code, drug_name, drug_format, drug_unit, manufacturer, drug_dosage, drug_type, drug_price, mnemonic_code, creation_date) VALUES
-('YP001', '阿莫西林胶囊',     '0.5g',   '盒', '华北制药', '胶囊剂', '西药', 12.50, 'AMXLJN', '2026-10-01'),
-('YP002', '布洛芬缓释胶囊',   '0.3g',   '盒', '中美史克', '胶囊剂', '西药', 18.00, 'BLFHSJN', '2026-10-01'),
-('YP003', '连花清瘟胶囊',     '0.35g',  '盒', '以岭药业', '胶囊剂', '中成药', 15.80, 'LHQWJN', '2026-10-01');
 
 CREATE TABLE outpatient_queue (
   register_id INT NOT NULL PRIMARY KEY,
