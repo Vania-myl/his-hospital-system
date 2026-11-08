@@ -43,7 +43,10 @@ const router = new VueRouter({
 // 各岗位登录后的默认落地页（其他岗位模块实现后在此补充）
 const ROLE_HOME = {
   window: '/register',
-  admin: '/record/flow'
+  admin: '/record/flow',
+  check: '/check',
+  lab: '/inspection',
+  treat: '/disposal'
 }
 
 // 路由守卫：登录校验 + 角色权限（admin 可访问全部）

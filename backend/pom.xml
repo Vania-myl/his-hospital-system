@@ -49,6 +49,12 @@
             <artifactId>jjwt</artifactId>
             <version>0.9.1</version>
         </dependency>
+        <!-- JJWT 0.9.1 在 JDK 9+ 运行时仍需 JAXB 的 DatatypeConverter -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
 
         <!-- Lombok：实体简化 getter/setter，IDEA 需安装 Lombok 插件 -->
         <dependency>
