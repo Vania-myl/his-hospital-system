@@ -45,7 +45,10 @@ const ROLE_HOME = {
   window: '/register',
   doctor: '/outpatient',
   pharmacy: '/pharmacy/dispense',
-  admin: '/statistics'
+  admin: '/statistics',
+  check: '/check',
+  lab: '/inspection',
+  treat: '/disposal'
 }
 // 路由守卫：登录校验 + 角色权限（admin 可访问全部）
 router.beforeEach((to, from, next) => {

@@ -1,7 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.his.mapper.CheckRequestMapper">
+    <insert id="insert" parameterType="com.his.entity.CheckRequest" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO check_request
+            (register_id, medical_technology_id, check_info, check_position, creation_time, check_state)
+        VALUES
+            (#{registerId}, #{medicalTechnologyId}, #{checkInfo}, #{checkPosition}, #{creationTime}, '1')
+    </insert>
+    <sql id="filters">
+        <where>
+            <if test="caseNumber != null and caseNumber != ''">AND r.case_number = #{caseNumber}</if>
+            <if test="realName != null and realName != ''">AND r.real_name LIKE CONCAT('%', #{realName}, '%')</if>
+            <if test="checkState != null and checkState != ''">AND c.check_state = #{checkState}</if>
+            <if test="creationDate != null and creationDate != ''">
+                AND c.creation_time &gt;= CONCAT(#{creationDate}, ' 00:00:00')
+                AND c.creation_time &lt; DATE_ADD(#{creationDate}, INTERVAL 1 DAY)
+            </if>
+        </where>
+    </sql>
 
+    <select id="selectList" resultType="com.his.check.dto.CheckRequestVO">
+        SELECT c.*, r.case_number, r.real_name, r.gender, r.age,
+               t.tech_name, t.tech_format,
+               CASE WHEN EXISTS (
+                   SELECT 1 FROM fee_record paid
+                   WHERE paid.register_id = c.register_id
+                     AND paid.item_type = '检查' AND paid.item_id = c.id
+                     AND paid.fee_type = '收费'
+                     AND NOT EXISTS (SELECT 1 FROM fee_record refunded WHERE refunded.refund_target_id = paid.id)
+               ) THEN 1 ELSE 0 END AS payment_ready,
+               executor.realname AS check_employee_name,
+               recorder.realname AS inputcheck_employee_name
+        FROM check_request c
+        JOIN register r ON r.id = c.register_id
+        JOIN medical_technology t ON t.id = c.medical_technology_id
+        LEFT JOIN employee executor ON executor.id = c.check_employee_id
+        LEFT JOIN employee recorder ON recorder.id = c.inputcheck_employee_id
+        <include refid="filters"/>
+        ORDER BY c.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(*) FROM check_request c
+        JOIN register r ON r.id = c.register_id
+        <include refid="filters"/>
+    </select>
+
+    <select id="selectById" resultType="com.his.entity.CheckRequest">
+        SELECT * FROM check_request WHERE id = #{id}
+    </select>
+
+    <update id="assign">
+        UPDATE check_request
+        SET check_employee_id = #{employeeId}, check_time = NOW(), check_state = '2'
+        WHERE id = #{id} AND check_state = '1'
+          AND EXISTS (
+              SELECT 1 FROM fee_record paid
+              WHERE paid.register_id = check_request.register_id
+                AND paid.item_type = '检查' AND paid.item_id = check_request.id
+                AND paid.fee_type = '收费'
+                AND NOT EXISTS (SELECT 1 FROM fee_record refunded WHERE refunded.refund_target_id = paid.id)
+          )
+    </update>
+
+    <update id="saveResult">
+        UPDATE check_request
+        SET inputcheck_employee_id = #{employeeId}, check_result = #{result},
+            check_remark = #{remark}, check_state = '3'
+        WHERE id = #{id} AND check_state = '2'
+    </update>
     <select id="countAll" resultType="int">
         SELECT COUNT(*)
         FROM check_request cr
