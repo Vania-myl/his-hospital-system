@@ -24,8 +24,8 @@ const routes = [
     children: [
       ...baseRoutes,
       ...registerRoutes,
-      ...recordRoutes,
       ...statisticsRoutes,
+      ...recordRoutes,
       ...outpatientRoutes,
       ...pharmacyRoutes,
       ...checkRoutes,
@@ -43,7 +43,7 @@ const router = new VueRouter({
 // 各岗位登录后的默认落地页（其他岗位模块实现后在此补充）
 const ROLE_HOME = {
   window: '/register',
-  admin: '/record/flow',
+  admin: '/statistics',
   check: '/check',
   lab: '/inspection',
   treat: '/disposal'

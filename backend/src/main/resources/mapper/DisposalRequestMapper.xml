@@ -70,4 +70,20 @@
             disposal_remark = #{remark}, disposal_state = '3'
         WHERE id = #{id} AND disposal_state = '2'
     </update>
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*)
+        FROM disposal_request dr
+        LEFT JOIN register r ON dr.register_id = r.id
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(dr.creation_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(dr.creation_time) &lt;= #{endDate}
+            </if>
+            <if test="departmentId != null">
+                AND r.department_id = #{departmentId}
+            </if>
+        </where>
+    </select>
 </mapper>
